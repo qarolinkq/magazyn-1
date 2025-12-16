@@ -1,5 +1,8 @@
 import streamlit as st
 
+# Ustawienie szerokości paska bocznego na 0, aby skupić się na głównym widoku
+# st.set_page_config(layout="wide") # Opcjonalnie: ustawia szeroki widok
+
 # --- 1. Zarządzanie Stanem Sesji (Session State Management) ---
 
 if 'produkty' not in st.session_state:
@@ -18,61 +21,48 @@ def usun_produkt(produkt_do_usuniecia):
         st.error(f"Wystąpił błąd podczas usuwania: {produkt_do_usuniecia}")
 
 
-# --- 3. Główna Funkcja Aplikacji (Streamlit App Layout) ---
+# --- 2. Główna Funkcja Aplikacji (Streamlit App Layout) ---
 
-# --- BARDZO DUŻY MIKOŁAJ NA PASKU BOCZNYM (st.sidebar) ---
-
-with st.sidebar:
-    # Użycie nagłówka H1 i dużego emoji, aby Mikołaj był "duży"
-    st.markdown("# 🎅") # Duży symbol Mikołaja
-    st.markdown("---")
-    
-    st.title("🎄 Magazyn Świąteczny")
-    
-    st.markdown("""
-        ### Kontrola Mikołaja
-        
-        **HOŁ, HOŁ, HOŁ!** Upewnij się, że lista prezentów jest aktualna.
-        Żadne dziecko nie może zostać pominięte!
-    """)
-    
-    # Możemy też użyć st.image z większą szerokością
-    # st.image(
-    #     "https://i.imgur.com/example-santa.png", # Zastąp faktycznym publicznym obrazkiem
-    #     width=250 # Większa szerokość
-    # )
-    
-    st.markdown("---")
-    st.info(f"Aktualnie w magazynie: **{len(st.session_state.produkty)}** prezentów.")
-
-
-# --- Główna Treść Aplikacji ---
 def main():
     st.title("📦 Prosta Aplikacja Magazynowa")
     st.markdown("Dodaj lub usuń produkty z listy. Stan jest przechowywany w pamięci (sesji przeglądarki).")
-
-    # Sekcja Dodawania Produktu
-    st.header("➕ Dodaj Produkt")
     
-    with st.container():
+    # --- NOWA STRUKTURA: Mikołaj w lewej kolumnie, Dodawanie w prawej ---
+    
+    # Dzielimy główny obszar na dwie kolumny (np. 1:2)
+    col_mikolaj, col_dodaj = st.columns([1, 2])
+    
+    with col_mikolaj:
+        st.markdown("# 🎅") # Duży symbol Mikołaja
+        st.header("Kontrola Świąteczna")
+        st.markdown("""
+            **HOŁ, HOŁ, HOŁ!**
+            
+            Magazyn jest gotowy.
+            
+            Aktualnie: **{len(st.session_state.produkty)}** prezentów.
+        """)
+        
+    with col_dodaj:
+        st.header("➕ Dodaj Produkt")
         st.text_input(
-            "Nazwa nowego produktu",
+            "Nazwa nowego produktu/prezentu",
             key="nowy_produkt",
             on_change=dodaj_produkt,
-            placeholder="Wprowadź nazwę produktu/prezentu i naciśnij Enter"
+            placeholder="Wprowadź nazwę i naciśnij Enter"
         )
-        st.button("Dodaj ręcznie", on_click=dodaj_produkt)
+        st.button("Dodaj do listy", on_click=dodaj_produkt)
 
-    # Separator
+    # --- Separator ---
     st.markdown("---")
 
-    # Sekcja Wyświetlania Produktów
+    # --- Sekcja Wyświetlania Produktów (Pełna Szerokość) ---
     st.header("🗒️ Lista Produktów w Magazynie")
 
     if st.session_state.produkty:
+        # Tabela (mniej więcej)
         st.markdown("**Lp.** | **Nazwa Produktu** | **Akcja**")
         
-        # Wyświetlanie produktów
         for i, produkt in enumerate(st.session_state.produkty):
             col1, col2, col3 = st.columns([0.1, 0.7, 0.2]) 
             
@@ -94,7 +84,7 @@ def main():
         st.info("Magazyn jest pusty. Mikołaj czeka na prezenty!")
 
     st.markdown("---")
-    st.caption("Aplikacja oparta o Streamlit i prostą listę w pamięci. Dane tracone po zamknięciu sesji.")
+    st.caption("Aplikacja oparta o Streamlit i prostą listę w pamięci.")
 
 if __name__ == "__main__":
     main()
