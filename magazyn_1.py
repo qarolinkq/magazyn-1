@@ -1,90 +1,109 @@
 import streamlit as st
 
-# Ustawienie szerokości paska bocznego na 0, aby skupić się na głównym widoku
-# st.set_page_config(layout="wide") # Opcjonalnie: ustawia szeroki widok
+# --- 1. Zarządzanie Stanem Sesji (Session State) ---
 
-# --- 1. Zarządzanie Stanem Sesji (Session State Management) ---
-
-if 'produkty' not in st.session_state:
-    st.session_state['produkty'] = [] 
+# Inicjalizacja słownika produktów { "Nazwa": ilość }
+if 'produkty_dict' not in st.session_state:
+    st.session_state['produkty_dict'] = {}
 
 def dodaj_produkt():
-    nazwa_produktu = st.session_state.nowy_produkt.strip()
-    if nazwa_produktu: 
-        st.session_state.produkty.append(nazwa_produktu)
-        st.session_state.nowy_produkt = "" 
+    nazwa = st.session_state.nowy_produkt.strip()
+    ilosc = st.session_state.ilosc_dodaj
+    if nazwa:
+        # Jeśli produkt istnieje, dodaj do obecnej ilości, jeśli nie - stwórz nowy
+        if nazwa in st.session_state.produkty_dict:
+            st.session_state.produkty_dict[nazwa] += ilosc
+        else:
+            st.session_state.produkty_dict[nazwa] = ilosc
+        # Czyszczenie pól po dodaniu
+        st.session_state.nowy_produkt = ""
+        st.session_state.ilosc_dodaj = 1
 
-def usun_produkt(produkt_do_usuniecia):
-    try:
-        st.session_state.produkty.remove(produkt_do_usuniecia)
-    except ValueError:
-        st.error(f"Wystąpił błąd podczas usuwania: {produkt_do_usuniecia}")
+def usun_ilosc(nazwa, ilosc_do_odjecia):
+    if nazwa in st.session_state.produkty_dict:
+        # Odejmij wybraną ilość
+        st.session_state.produkty_dict[nazwa] -= ilosc_do_odjecia
+        # Jeśli ilość spadnie do 0 lub mniej, usuń produkt całkowicie
+        if st.session_state.produkty_dict[nazwa] <= 0:
+            del st.session_state.produkty_dict[nazwa]
 
-
-# --- 2. Główna Funkcja Aplikacji (Streamlit App Layout) ---
+# --- 2. Układ Aplikacji (Layout) ---
 
 def main():
-    st.title("📦 Prosta Aplikacja Magazynowa")
-    st.markdown("Dodaj lub usuń produkty z listy. Stan jest przechowywany w pamięci (sesji przeglądarki).")
+    st.set_page_config(page_title="Magazyn Mikołaja", layout="wide")
+    st.title("📦 Zaawansowany Magazyn Prezentów")
     
-    # --- NOWA STRUKTURA: Mikołaj w lewej kolumnie, Dodawanie w prawej ---
-    
-    # Dzielimy główny obszar na dwie kolumny (np. 1:2)
+    # --- Sekcja Góra: Mikołaj i Dodawanie ---
     col_mikolaj, col_dodaj = st.columns([1, 2])
     
     with col_mikolaj:
-        st.markdown("# 🎅") # Duży symbol Mikołaja
+        st.markdown("# 🎅")
         st.header("Kontrola Świąteczna")
-        st.markdown("""
+        laczna_suma = sum(st.session_state.produkty_dict.values())
+        st.markdown(f"""
             **HOŁ, HOŁ, HOŁ!**
-            
-            Magazyn jest gotowy.
-            
-            Aktualnie: **{len(st.session_state.produkty)}** prezentów.
+            Aktualnie w magazynie masz:
+            ## {laczna_suma} 
+            prezentów łącznie.
         """)
         
     with col_dodaj:
-        st.header("➕ Dodaj Produkt")
-        st.text_input(
-            "Nazwa nowego produktu/prezentu",
-            key="nowy_produkt",
-            on_change=dodaj_produkt,
-            placeholder="Wprowadź nazwę i naciśnij Enter"
-        )
-        st.button("Dodaj do listy", on_click=dodaj_produkt)
+        st.header("➕ Przyjęcie Towaru")
+        c1, c2 = st.columns([3, 1])
+        with c1:
+            st.text_input("Co chcesz dodać?", key="nowy_produkt", placeholder="Wpisz nazwę...")
+        with c2:
+            st.number_input("Ile sztuk?", min_value=1, value=1, key="ilosc_dodaj")
+        
+        st.button("Dodaj do magazynu", on_click=dodaj_produkt, use_container_width=True)
 
-    # --- Separator ---
     st.markdown("---")
 
-    # --- Sekcja Wyświetlania Produktów (Pełna Szerokość) ---
-    st.header("🗒️ Lista Produktów w Magazynie")
+    # --- Sekcja Dół: Lista i Wydawanie ---
+    st.header("🗒️ Aktualny Stan i Wydawanie z Magazynu")
 
-    if st.session_state.produkty:
-        # Tabela (mniej więcej)
-        st.markdown("**Lp.** | **Nazwa Produktu** | **Akcja**")
+    if st.session_state.produkty_dict:
+        # Nagłówki "tabeli"
+        h1, h2, h3, h4 = st.columns([0.4, 0.2, 0.2, 0.2])
+        h1.write("**Nazwa Produktu**")
+        h2.write("**W magazynie**")
+        h3.write("**Ilość do odjęcia**")
+        h4.write("**Akcja**")
         
-        for i, produkt in enumerate(st.session_state.produkty):
-            col1, col2, col3 = st.columns([0.1, 0.7, 0.2]) 
+        # Iterujemy po produktach w słowniku
+        for nazwa, stan in list(st.session_state.produkty_dict.items()):
+            col_nazwa, col_stan, col_input, col_btn = st.columns([0.4, 0.2, 0.2, 0.2])
             
-            with col1:
-                st.write(f"*{i+1}.*")
-                
-            with col2:
-                st.write(f"**{produkt}**")
-                
-            with col3:
+            with col_nazwa:
+                st.write(f"**{nazwa}**")
+            
+            with col_stan:
+                st.write(f"{stan} szt.")
+            
+            with col_input:
+                # Pole pozwalające wybrać, ile sztuk chcemy usunąć
+                ile_odjac = st.number_input(
+                    "Ile usunąć?", 
+                    min_value=1, 
+                    max_value=stan, # Nie pozwoli usunąć więcej niż jest w magazynie
+                    value=1, 
+                    key=f"del_val_{nazwa}",
+                    label_visibility="collapsed"
+                )
+            
+            with col_btn:
                 st.button(
-                    "Usuń",
-                    key=f"delete_btn_{i}",
-                    on_click=usun_produkt,
-                    args=(produkt,),
-                    type="secondary"
+                    "Odejmij / Usuń", 
+                    key=f"del_btn_{nazwa}", 
+                    on_click=usun_ilosc, 
+                    args=(nazwa, ile_odjac),
+                    type="primary"
                 )
     else:
-        st.info("Magazyn jest pusty. Mikołaj czeka na prezenty!")
+        st.info("Magazyn jest pusty. Mikołaj czeka na dostawę!")
 
     st.markdown("---")
-    st.caption("Aplikacja oparta o Streamlit i prostą listę w pamięci.")
+    st.caption("Dane są zapisane w sesji (znikną po odświeżeniu strony w przeglądarce).")
 
 if __name__ == "__main__":
     main()
